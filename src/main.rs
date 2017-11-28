@@ -14,7 +14,7 @@ fn main() {
 
     let lines: Vec<String> = buffer.split('\n').map(|s| s.to_string()).collect();
 
-    let editor = Editor::create(lines);
+    let mut editor = Editor::create(lines);
     
     editor.run();
 }
@@ -22,15 +22,17 @@ fn main() {
 
 #[derive(Debug)]
 struct Editor {
-    buffer: Buffer
+    buffer: Buffer,
+    cursor: Cursor,
 }
 
 impl Editor {
-    fn run(&self) {
-        let _stdout = std::io::stdout().into_raw_mode().unwrap();
+    fn run(&mut self) {
+        let mut stdout = std::io::stdout().into_raw_mode().unwrap();
         
         loop {
             self.render();
+            let _result = stdout.flush();
             if self.handle_input() {
                 break
             }
@@ -41,15 +43,32 @@ impl Editor {
         ANSI::clear_screen();
         ANSI::move_cursor(0, 0);
         self.buffer.render();
+        ANSI::move_cursor(self.cursor.row, self.cursor.col);
     }
 
-    fn handle_input(&self) -> bool {
+    fn handle_input(&mut self) -> bool {
         let stdin = std::io::stdin();
         let key = stdin.keys().next().unwrap();
 
         let should_quit = match key {
             Ok(Key::Ctrl('c')) => true,
             Ok(Key::Ctrl('q')) => true,
+            Ok(Key::Ctrl('n')) => {
+                self.cursor = self.cursor.down().clamp();
+                false
+            }
+            Ok(Key::Ctrl('p')) => {
+                self.cursor = self.cursor.up().clamp();
+                false
+            }
+            Ok(Key::Ctrl('f')) => {
+                self.cursor = self.cursor.right().clamp();
+                false
+            }
+            Ok(Key::Ctrl('b')) => {
+                self.cursor = self.cursor.left().clamp();
+                false
+            }
             _ => false
         };
         
@@ -60,8 +79,12 @@ impl Editor {
 
     fn create(lines: Vec<String>) -> Editor {
         let buffer = Buffer { lines };
+        let cursor = Cursor {
+            row: 0,
+            col: 0,
+        };
 
-        Editor { buffer }
+        Editor { buffer, cursor }
     }
 }
 
@@ -78,9 +101,54 @@ impl Buffer {
     }
 }
 
-// #[derive(Debug)]
-// struct Cursor {
-// }
+#[derive(Debug)]
+struct Cursor {
+    row: i64,
+    col: i64,
+}
+
+impl Cursor {
+    fn down(&self) -> Cursor {
+        return Cursor {
+            row: self.row + 1,
+            col: self.col,
+        }
+    }
+
+    fn up(&self) -> Cursor {
+        return Cursor {
+            row: self.row - 1,
+            col: self.col,
+        }
+    }
+
+    fn left(&self) -> Cursor {
+        return Cursor {
+            row: self.row,
+            col: self.col - 1,
+        }
+    }
+
+    fn right(&self) -> Cursor {
+        return Cursor {
+            row: self.row,
+            col: self.col + 1,
+        }
+    }
+
+    fn clamp(&self) -> Cursor {
+        let row =  std::cmp::min(self.row, 3);
+        let row =  std::cmp::max(row, 0);
+
+        let col =  std::cmp::min(self.col, 3);
+        let col =  std::cmp::max(col, 0);
+
+        return Cursor {
+            row,
+            col,
+        }
+    }
+}
 
 struct ANSI {
 }
@@ -90,7 +158,7 @@ impl ANSI {
         print!("[2J");
     }
 
-    fn move_cursor(row: u64, column: u64) {
+    fn move_cursor(row: i64, column: i64) {
         print!("[{};{}H", row + 1, column + 1);
     }
 }
