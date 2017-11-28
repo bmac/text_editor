@@ -14,7 +14,7 @@ fn main() {
 
     let lines: Vec<String> = buffer.split('\n').map(|s| s.to_string()).collect();
 
-    let mut editor = Editor::create(lines);
+    let mut editor = Editor::new(lines);
     
     editor.run();
 }
@@ -50,34 +50,23 @@ impl Editor {
         let stdin = std::io::stdin();
         let key = stdin.keys().next().unwrap();
 
-        let should_quit = match key {
+        match key {
+            Ok(Key::Ctrl('n')) => self.cursor = self.cursor.down(&self.buffer),
+            Ok(Key::Ctrl('p')) => self.cursor = self.cursor.up(&self.buffer),
+            Ok(Key::Ctrl('f')) => self.cursor = self.cursor.right(&self.buffer),
+            Ok(Key::Ctrl('b')) => self.cursor = self.cursor.left(&self.buffer),
+            _ => ()
+        };
+
+        // return true to break the look and exit the program
+        return match key {
             Ok(Key::Ctrl('c')) => true,
             Ok(Key::Ctrl('q')) => true,
-            Ok(Key::Ctrl('n')) => {
-                self.cursor = self.cursor.down().clamp();
-                false
-            }
-            Ok(Key::Ctrl('p')) => {
-                self.cursor = self.cursor.up().clamp();
-                false
-            }
-            Ok(Key::Ctrl('f')) => {
-                self.cursor = self.cursor.right().clamp();
-                false
-            }
-            Ok(Key::Ctrl('b')) => {
-                self.cursor = self.cursor.left().clamp();
-                false
-            }
-            _ => false
-        };
-        
-        println!("{:?}", key);
-
-        return should_quit;
+            _ => false,
+        }
     }
 
-    fn create(lines: Vec<String>) -> Editor {
+    fn new(lines: Vec<String>) -> Editor {
         let buffer = Buffer { lines };
         let cursor = Cursor {
             row: 0,
@@ -99,6 +88,10 @@ impl Buffer {
             print!("{}\r\n", line);
         }
     }
+
+    fn line_count(&self) -> i64 {
+        return 3;
+    }
 }
 
 #[derive(Debug)]
@@ -108,36 +101,36 @@ struct Cursor {
 }
 
 impl Cursor {
-    fn down(&self) -> Cursor {
+    fn down(&self, buffer: &Buffer) -> Cursor {
         return Cursor {
             row: self.row + 1,
             col: self.col,
-        }
+        }.clamp(buffer)
     }
 
-    fn up(&self) -> Cursor {
+    fn up(&self, buffer: &Buffer) -> Cursor {
         return Cursor {
             row: self.row - 1,
             col: self.col,
-        }
+        }.clamp(buffer)
     }
 
-    fn left(&self) -> Cursor {
+    fn left(&self, buffer: &Buffer) -> Cursor {
         return Cursor {
             row: self.row,
             col: self.col - 1,
-        }
+        }.clamp(buffer)
     }
 
-    fn right(&self) -> Cursor {
+    fn right(&self, buffer: &Buffer) -> Cursor {
         return Cursor {
             row: self.row,
             col: self.col + 1,
-        }
+        }.clamp(buffer)
     }
 
-    fn clamp(&self) -> Cursor {
-        let row =  std::cmp::min(self.row, 3);
+    fn clamp(&self, buffer: &Buffer) -> Cursor {
+        let row =  std::cmp::min(self.row, buffer.line_count() -1);
         let row =  std::cmp::max(row, 0);
 
         let col =  std::cmp::min(self.col, 3);
