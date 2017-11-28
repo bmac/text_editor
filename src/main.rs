@@ -90,7 +90,11 @@ impl Buffer {
     }
 
     fn line_count(&self) -> i64 {
-        return 3;
+        return self.lines.len() as i64;
+    }
+
+    fn line_length(&self, row: i64) -> i64 {
+        return self.lines[row as usize].len() as i64;
     }
 }
 
@@ -133,7 +137,7 @@ impl Cursor {
         let row =  std::cmp::min(self.row, buffer.line_count() -1);
         let row =  std::cmp::max(row, 0);
 
-        let col =  std::cmp::min(self.col, 3);
+        let col =  std::cmp::min(self.col, buffer.line_length(row));
         let col =  std::cmp::max(col, 0);
 
         return Cursor {
