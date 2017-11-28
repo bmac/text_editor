@@ -55,6 +55,16 @@ impl Editor {
             Ok(Key::Ctrl('p')) => self.cursor = self.cursor.up(&self.buffer),
             Ok(Key::Ctrl('f')) => self.cursor = self.cursor.right(&self.buffer),
             Ok(Key::Ctrl('b')) => self.cursor = self.cursor.left(&self.buffer),
+            Ok(Key::Backspace) => {
+                if self.cursor.col > 0 {
+                    self.buffer = self.buffer.delete(self.cursor.row, self.cursor.col -1 );
+                    self.cursor = self.cursor.left(&self.buffer);
+                }
+            }
+            Ok(Key::Char(c)) => {
+                self.buffer = self.buffer.insert(c, self.cursor.row, self.cursor.col);
+                self.cursor = self.cursor.right(&self.buffer);
+            }
             _ => ()
         };
 
@@ -95,6 +105,19 @@ impl Buffer {
 
     fn line_length(&self, row: i64) -> i64 {
         return self.lines[row as usize].len() as i64;
+    }
+
+    fn insert(&self, character: char, row: i64, col: i64) -> Buffer {
+        let mut lines = self.lines.to_vec();
+        lines[row as usize].insert(col as usize, character);
+        return Buffer { lines };
+    }
+
+    fn delete(&self, row: i64, col: i64) -> Buffer {
+        let mut lines = self.lines.to_vec();
+        let start = col as usize;
+        lines[row as usize].drain(start..start+1);
+        return Buffer { lines };
     }
 }
 
