@@ -61,6 +61,10 @@ impl Editor {
                     self.cursor = self.cursor.left(&self.buffer);
                 }
             }
+            Ok(Key::Char('\n')) => {
+                self.buffer = self.buffer.split_line(self.cursor.row, self.cursor.col);
+                self.cursor = self.cursor.down(&self.buffer).move_to_col(0);
+            }
             Ok(Key::Char(c)) => {
                 self.buffer = self.buffer.insert(c, self.cursor.row, self.cursor.col);
                 self.cursor = self.cursor.right(&self.buffer);
@@ -119,6 +123,16 @@ impl Buffer {
         lines[row as usize].drain(start..start+1);
         return Buffer { lines };
     }
+
+    fn split_line(&self, row: i64, col: i64) -> Buffer {
+        let mut lines = self.lines.to_vec();
+        let line = &self.lines[row as usize];
+        let (first, second) = line.split_at(col as usize);
+        lines.remove(row as usize);
+        lines.insert(row as usize, String::from(second));
+        lines.insert(row as usize, String::from(first));
+        return Buffer { lines };
+    }
 }
 
 #[derive(Debug)]
@@ -165,6 +179,13 @@ impl Cursor {
 
         return Cursor {
             row,
+            col,
+        }
+    }
+
+    fn move_to_col(&self, col: i64) -> Cursor {
+        return Cursor {
+            row: self.row,
             col,
         }
     }
